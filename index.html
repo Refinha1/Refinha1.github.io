@@ -85,23 +85,39 @@
 
         <button id="btn-confirmar" type="submit"
                 class="h-12 w-full rounded-lg bg-rose-500 font-semibold text-white hover:bg-rose-600 disabled:opacity-60">
-          Confirmar e ver PIX
+          Gerar PIX
         </button>
       </form>
 
-      <!-- Passo 2: PIX -->
+      <!-- Passo 2: PIX dinâmico + espera da confirmação -->
       <div id="passo-pix" class="hidden space-y-4 text-center">
-        <h3 class="text-xl font-semibold">Quase lá! Faça o PIX 💛</h3>
-        <p class="text-stone-600">Sua mensagem já está no mural. Agora transfira:</p>
-        <p id="pix-valor" class="text-3xl font-bold text-rose-600"></p>
-        <img id="pix-qr" alt="QR Code PIX" class="mx-auto h-56 w-56 rounded-lg border object-contain" />
 
-        <div id="pix-copia-bloco" class="hidden">
-          <p class="mb-1 text-sm text-stone-500">Ou use o PIX copia e cola:</p>
+        <!-- 2a) Aguardando pagamento -->
+        <div id="pix-aguardando" class="space-y-4">
+          <h3 class="text-xl font-semibold">Pague com PIX 💛</h3>
+          <p class="text-stone-600">Escaneie o QR Code ou use o copia e cola. O valor já vem preenchido.</p>
+          <p id="pix-valor" class="text-3xl font-bold text-rose-600"></p>
+          <img id="pix-qr" alt="QR Code PIX" class="mx-auto h-56 w-56 rounded-lg border object-contain" />
+
           <button id="btn-copiar" type="button"
                   class="w-full rounded-lg border px-3 py-2 text-sm hover:bg-stone-100">
-            Copiar código PIX
+            Copiar código PIX (copia e cola)
           </button>
+
+          <p class="flex items-center justify-center gap-2 text-sm text-stone-500">
+            <span class="h-3 w-3 animate-pulse rounded-full bg-amber-400"></span>
+            Aguardando confirmação do pagamento…
+          </p>
+          <p class="text-xs text-stone-400">
+            O código expira em 60 minutos. Sua mensagem entra no mural assim que o pagamento for confirmado.
+          </p>
+        </div>
+
+        <!-- 2b) Pagamento confirmado -->
+        <div id="pix-confirmado" class="hidden space-y-3 py-4">
+          <div class="text-6xl">🎉</div>
+          <h3 class="text-xl font-semibold">Pagamento confirmado!</h3>
+          <p class="text-stone-600">Muito obrigado! Sua mensagem já está no mural.</p>
         </div>
 
         <button type="button" data-fechar class="h-11 w-full rounded-lg bg-stone-800 font-medium text-white">Fechar</button>
