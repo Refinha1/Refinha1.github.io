@@ -13,12 +13,12 @@ import {
 // Estes valores NÃO são segredos: quem protege os dados são as Security Rules.
 // (O token do Mercado Pago NUNCA vem para cá: fica no backend.)
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "SEU_APP_ID",
+  apiKey: "AIzaSyD7396GnE9pVule0uYPb6XObIs3yrBTVDg",
+  authDomain: "casa-nova-refinha.firebaseapp.com",
+  projectId: "casa-nova-refinha",
+  storageBucket: "casa-nova-refinha.firebasestorage.app",
+  messagingSenderId: "48902111617",
+  appId: "1:48902111617:web:8d642eda94297134e3a880"
 };
 
 const VALOR_COTA = 10; // R$ por cota (só para exibição; o servidor recalcula o valor)
