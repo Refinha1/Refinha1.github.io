@@ -3,36 +3,40 @@
 // =====================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, onSnapshot, serverTimestamp,
+  getFirestore, collection, doc, query, where, onSnapshot,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getFunctions, httpsCallable,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 // Cole aqui o objeto "firebaseConfig" do console do Firebase.
-
 // Estes valores NÃO são segredos: quem protege os dados são as Security Rules.
+// (O token do Mercado Pago NUNCA vem para cá: fica no backend.)
 const firebaseConfig = {
-  apiKey: "AIzaSyD7396GnE9pVule0uYPb6XObIs3yrBTVDg",
-  authDomain: "casa-nova-refinha.firebaseapp.com",
-  projectId: "casa-nova-refinha",
-  storageBucket: "casa-nova-refinha.firebasestorage.app",
-  messagingSenderId: "48902111617",
-  appId: "1:48902111617:web:8d642eda94297134e3a880",
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  projectId: "SEU_PROJETO",
+  storageBucket: "SEU_PROJETO.appspot.com",
+  messagingSenderId: "000000000000",
+  appId: "SEU_APP_ID",
 };
 
-const VALOR_COTA = 10; // R$ por cota (as regras do Firestore também assumem 10)
-const PIX = {
-  qrImagem: "qrcode-pix.png", // imagem do QR Code PIX da sua conta
-  copiaECola: "",             // opcional: cole aqui o código "copia e cola"
-};
+const VALOR_COTA = 10; // R$ por cota (só para exibição; o servidor recalcula o valor)
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+// A região precisa ser a mesma das Cloud Functions
+const functions = getFunctions(app, "southamerica-east1");
+const criarContribuicao = httpsCallable(functions, "criarContribuicao");
 
 // =====================================================================
 // 2) ESTADO E UTILITÁRIOS
 // =====================================================================
-let presentes = [];      // docs de "presentes"
-let contribuicoes = [];  // docs de "contribuicoes"
+let presentes = [];       // docs de "presentes"
+let contribuicoes = [];   // somente contribuições CONFIRMADAS (as regras só liberam essas)
 let presenteAtual = null; // presente aberto no modal
+let copiaECola = "";      // código PIX copia e cola da contribuição atual
+let pararEspera = null;   // função que cancela a escuta da confirmação
 
 const $ = (id) => document.getElementById(id);
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -42,7 +46,7 @@ const esc = (texto) =>
   String(texto ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-/** Soma de cotas já doadas por presente: { presenteId: total } */
+/** Soma de cotas confirmadas por presente: { presenteId: total } */
 function totaisPorPresente() {
   const totais = {};
   for (const c of contribuicoes) {
@@ -61,6 +65,7 @@ onSnapshot(
       .map((d) => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
     renderCatalogo();
+    renderRanking();
   },
   (erro) => {
     console.error(erro);
@@ -68,8 +73,9 @@ onSnapshot(
   }
 );
 
+// IMPORTANTE: o filtro por status é obrigatório, senão as regras bloqueiam a consulta
 onSnapshot(
-  collection(db, "contribuicoes"),
+  query(collection(db, "contribuicoes"), where("status", "==", "confirmado")),
   (snap) => {
     contribuicoes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     renderCatalogo(); // atualiza barras de progresso
@@ -163,10 +169,15 @@ function atualizarTotal() {
   $("total-valor").textContent = brl.format(n * VALOR_COTA);
 }
 
+function encerrarEspera() {
+  if (pararEspera) { pararEspera(); pararEspera = null; }
+}
+
 function abrirModal(presenteId) {
   presenteAtual = presentes.find((p) => p.id === presenteId);
   if (!presenteAtual) return;
 
+  encerrarEspera();
   $("modal-item").textContent = presenteAtual.nome;
   $("modal-restantes").textContent = `Faltam ${cotasRestantes(presenteAtual)} cotas`;
   $("passo-form").reset();
@@ -182,6 +193,7 @@ function abrirModal(presenteId) {
 }
 
 function fecharModal() {
+  encerrarEspera();
   $("modal").classList.add("hidden");
   $("modal").classList.remove("flex");
   document.body.classList.remove("overflow-hidden");
@@ -204,7 +216,30 @@ $("menos").addEventListener("click", () => { campoCotas.value = (parseInt(campoC
 $("mais").addEventListener("click",  () => { campoCotas.value = (parseInt(campoCotas.value, 10) || 0) + 1; atualizarTotal(); });
 campoCotas.addEventListener("input", atualizarTotal);
 
-// Envio: salva no Firestore e mostra o PIX
+/** Mostra o QR Code e passa a escutar o documento até ele virar "confirmado". */
+function mostrarPix({ contribuicaoId, valor, copiaECola: codigo, qrCodeBase64 }) {
+  copiaECola = codigo;
+  $("pix-valor").textContent = brl.format(valor);
+  $("pix-qr").src = `data:image/png;base64,${qrCodeBase64}`;
+  $("btn-copiar").textContent = "Copiar código PIX (copia e cola)";
+
+  $("pix-aguardando").classList.remove("hidden");
+  $("pix-confirmado").classList.add("hidden");
+  $("passo-form").classList.add("hidden");
+  $("passo-pix").classList.remove("hidden");
+
+  // O webhook do backend altera o status → a tela reage em tempo real
+  encerrarEspera();
+  pararEspera = onSnapshot(doc(db, "contribuicoes", contribuicaoId), (snap) => {
+    if (snap.data()?.status === "confirmado") {
+      $("pix-aguardando").classList.add("hidden");
+      $("pix-confirmado").classList.remove("hidden");
+      encerrarEspera();
+    }
+  });
+}
+
+// Envio: o backend valida, grava como "pendente" e devolve o PIX
 $("passo-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const erro = $("erro-form");
@@ -226,40 +261,35 @@ $("passo-form").addEventListener("submit", async (e) => {
   }
 
   btn.disabled = true;
-  btn.textContent = "Salvando…";
+  btn.textContent = "Gerando PIX…";
   erro.classList.add("hidden");
 
   try {
-    const valor = cotas * VALOR_COTA;
-    await addDoc(collection(db, "contribuicoes"), {
+    const { data } = await criarContribuicao({
       presenteId: presenteAtual.id,
       nome,
       mensagem,
       cotas,
-      valor,
-      criadoEm: serverTimestamp(),
     });
-
-    // Passo 2: exibe PIX
-    $("pix-valor").textContent = brl.format(valor);
-    $("pix-qr").src = PIX.qrImagem;
-    $("pix-copia-bloco").classList.toggle("hidden", !PIX.copiaECola);
-    $("passo-form").classList.add("hidden");
-    $("passo-pix").classList.remove("hidden");
+    mostrarPix(data);
   } catch (err) {
     console.error(err);
-    erro.textContent = "Não foi possível salvar. Tente novamente.";
+    // Mensagens "esperadas" do backend são amigáveis; o resto vira texto genérico
+    const amigaveis = ["functions/invalid-argument", "functions/failed-precondition", "functions/not-found"];
+    erro.textContent = amigaveis.includes(err.code)
+      ? err.message
+      : "Não foi possível gerar o PIX. Tente novamente.";
     erro.classList.remove("hidden");
   } finally {
     btn.disabled = false;
-    btn.textContent = "Confirmar e ver PIX";
+    btn.textContent = "Gerar PIX";
   }
 });
 
 // Copia e cola
 $("btn-copiar").addEventListener("click", async () => {
   try {
-    await navigator.clipboard.writeText(PIX.copiaECola);
+    await navigator.clipboard.writeText(copiaECola);
     $("btn-copiar").textContent = "Código copiado ✔";
   } catch {
     $("btn-copiar").textContent = "Não foi possível copiar";
