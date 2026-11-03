@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lista de Presentes</title>
+  <!-- Tailwind via CDN: simples e suficiente para uma página estática -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-50 text-stone-800 antialiased">
+
+  <!-- ===== Cabeçalho ===== -->
+  <header class="bg-gradient-to-br from-rose-500 to-amber-400 text-white">
+    <div class="mx-auto max-w-5xl px-4 py-12 text-center">
+      <h1 class="text-3xl font-bold sm:text-5xl">Lista de Presentes</h1>
+      <p class="mx-auto mt-3 max-w-xl text-white/90">
+        Escolha um presente, contribua com quantas cotas quiser (R$ 10,00 cada)
+        e deixe uma mensagem de felicitação. Obrigado pelo carinho!
+      </p>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-5xl space-y-14 px-4 py-10">
+
+    <!-- ===== Catálogo ===== -->
+    <section>
+      <h2 class="mb-5 text-2xl font-semibold">Presentes</h2>
+      <p id="estado-catalogo" class="text-stone-500">Carregando presentes…</p>
+      <!-- Mobile-first: 1 coluna → 2 (sm) → 3 (lg) -->
+      <div id="lista-presentes" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"></div>
+    </section>
+
+    <!-- ===== Mural e Ranking ===== -->
+    <section>
+      <h2 class="mb-5 text-2xl font-semibold">Mural de felicitações</h2>
+      <p id="estado-ranking" class="text-stone-500">Ainda não há contribuições. Seja o primeiro!</p>
+      <ol id="lista-ranking" class="space-y-3"></ol>
+    </section>
+  </main>
+
+  <footer class="py-8 text-center text-sm text-stone-400">Feito com carinho 💛</footer>
+
+  <!-- ===== Modal de contribuição ===== -->
+  <div id="modal" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/50 sm:items-center">
+    <div class="max-h-[95vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl">
+
+      <!-- Passo 1: formulário -->
+      <form id="passo-form" class="space-y-4" novalidate>
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm text-stone-500">Você vai presentear com</p>
+            <h3 id="modal-item" class="text-xl font-semibold"></h3>
+            <p id="modal-restantes" class="text-sm text-stone-500"></p>
+          </div>
+          <button type="button" data-fechar class="text-2xl leading-none text-stone-400 hover:text-stone-600" aria-label="Fechar">&times;</button>
+        </div>
+
+        <!-- Seletor de cotas -->
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="campo-cotas">Quantidade de cotas</label>
+          <div class="flex items-center gap-2">
+            <button type="button" id="menos" class="h-11 w-11 rounded-lg border text-xl hover:bg-stone-100">−</button>
+            <input id="campo-cotas" type="number" min="1" value="1" inputmode="numeric"
+                   class="h-11 w-full rounded-lg border text-center text-lg" />
+            <button type="button" id="mais" class="h-11 w-11 rounded-lg border text-xl hover:bg-stone-100">+</button>
+          </div>
+          <p class="mt-2 text-right text-lg font-semibold text-rose-600">
+            Total: <span id="total-valor">R$ 10,00</span>
+          </p>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="campo-nome">Seu nome</label>
+          <input id="campo-nome" type="text" maxlength="60" required autocomplete="name"
+                 class="h-11 w-full rounded-lg border px-3" />
+        </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="campo-mensagem">Mensagem de felicitação</label>
+          <textarea id="campo-mensagem" rows="3" maxlength="300"
+                    class="w-full rounded-lg border px-3 py-2"></textarea>
+        </div>
+
+        <p id="erro-form" class="hidden text-sm text-red-600"></p>
+
+        <button id="btn-confirmar" type="submit"
+                class="h-12 w-full rounded-lg bg-rose-500 font-semibold text-white hover:bg-rose-600 disabled:opacity-60">
+          Confirmar e ver PIX
+        </button>
+      </form>
+
+      <!-- Passo 2: PIX -->
+      <div id="passo-pix" class="hidden space-y-4 text-center">
+        <h3 class="text-xl font-semibold">Quase lá! Faça o PIX 💛</h3>
+        <p class="text-stone-600">Sua mensagem já está no mural. Agora transfira:</p>
+        <p id="pix-valor" class="text-3xl font-bold text-rose-600"></p>
+        <img id="pix-qr" alt="QR Code PIX" class="mx-auto h-56 w-56 rounded-lg border object-contain" />
+
+        <div id="pix-copia-bloco" class="hidden">
+          <p class="mb-1 text-sm text-stone-500">Ou use o PIX copia e cola:</p>
+          <button id="btn-copiar" type="button"
+                  class="w-full rounded-lg border px-3 py-2 text-sm hover:bg-stone-100">
+            Copiar código PIX
+          </button>
+        </div>
+
+        <button type="button" data-fechar class="h-11 w-full rounded-lg bg-stone-800 font-medium text-white">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- type="module" é necessário para os imports do Firebase -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
