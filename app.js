@@ -23,15 +23,15 @@ const firebaseConfig = {
 // PERSONALIZE AQUI: textos e foto do topo da página
 // ---------------------------------------------------------------------
 const SITE = {
-  rotulo: "Chá de casa nova 🏡",                 // frase pequena acima do título
-  titulo: "Nossa Casa Nova",                      // título grande
+  rotulo: "Chá de casa nova ",                 // frase pequena acima do título
+  titulo: "Nossa Primeira casa",                      // título grande
   subtitulo: "Escolha um presente, contribua com quantas cotas quiser e deixe uma mensagem de carinho.",
   fotoTopo: "fotos/casa.jpg",                     // foto do topo (suba em /fotos no GitHub)
   posicaoFoto: "center",                          // enquadramento: "center", "top", "center 30%"...
   rodape: "powered by Rafael Bonitão  ",
 };
 
-const VALOR_COTA = 10; // R$ por cota (só para exibição; o servidor recalcula o valor)
+const VALOR_COTA = 20; // R$ por cota (só para exibição; o servidor recalcula o valor)
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -263,8 +263,8 @@ $("modal").addEventListener("click", (e) => { if (e.target === $("modal")) fecha
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharModal(); });
 
 // Controles de quantidade
-$("menos").addEventListener("click", () => { campoCotas.value = (parseInt(campoCotas.value, 10) || 1) - 1; atualizarTotal(); });
-$("mais").addEventListener("click",  () => { campoCotas.value = (parseInt(campoCotas.value, 10) || 0) + 1; atualizarTotal(); });
+$("menos").addEventListener("click", () => { campoCotas.value = (parseInt(campoCotas.value, 20) || 1) - 1; atualizarTotal(); });
+$("mais").addEventListener("click",  () => { campoCotas.value = (parseInt(campoCotas.value, 20) || 0) + 1; atualizarTotal(); });
 campoCotas.addEventListener("input", atualizarTotal);
 
 /** Mostra o QR Code e passa a escutar o documento até ele virar "confirmado". */
@@ -298,7 +298,7 @@ $("passo-form").addEventListener("submit", async (e) => {
 
   const nome = $("campo-nome").value.trim();
   const mensagem = $("campo-mensagem").value.trim();
-  const cotas = parseInt(campoCotas.value, 10);
+  const cotas = parseInt(campoCotas.value, 20);
 
   if (!nome) {
     erro.textContent = "Informe seu nome.";
