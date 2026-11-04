@@ -28,7 +28,7 @@ const SITE = {
   subtitulo: "Escolha um presente, contribua com quantas cotas quiser e deixe uma mensagem de carinho.",
   fotoTopo: "fotos/casa.jpg",                     // foto do topo (suba em /fotos no GitHub)
   posicaoFoto: "center",                          // enquadramento: "center", "top", "center 30%"...
-  rodape: "Feito com carinho 💛",
+  rodape: "powered by Rafael Bonitão  ",
 };
 
 const VALOR_COTA = 10; // R$ por cota (só para exibição; o servidor recalcula o valor)
