@@ -9,9 +9,7 @@ import {
   getFunctions, httpsCallable,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
-// Cole aqui o objeto "firebaseConfig" do console do Firebase.
-// Estes valores NÃO são segredos: quem protege os dados são as Security Rules.
-// (O token do Mercado Pago NUNCA vem para cá: fica no backend.)
+// Cole aqui o seu "firebaseConfig" (não são segredos: as Security Rules protegem os dados)
 const firebaseConfig = {
   apiKey: "AIzaSyD7396GnE9pVule0uYPb6XObIs3yrBTVDg",
   authDomain: "casa-nova-refinha.firebaseapp.com",
@@ -19,6 +17,18 @@ const firebaseConfig = {
   storageBucket: "casa-nova-refinha.firebasestorage.app",
   messagingSenderId: "48902111617",
   appId: "1:48902111617:web:8d642eda94297134e3a880"
+};
+
+// ---------------------------------------------------------------------
+// PERSONALIZE AQUI: textos e foto do topo da página
+// ---------------------------------------------------------------------
+const SITE = {
+  rotulo: "Chá de casa nova 🏡",                 // frase pequena acima do título
+  titulo: "Nossa Casa Nova",                      // título grande
+  subtitulo: "Escolha um presente, contribua com quantas cotas quiser e deixe uma mensagem de carinho.",
+  fotoTopo: "fotos/casa.jpg",                     // foto do topo (suba em /fotos no GitHub)
+  posicaoFoto: "center",                          // enquadramento: "center", "top", "center 30%"...
+  rodape: "Feito com carinho 💛",
 };
 
 const VALOR_COTA = 10; // R$ por cota (só para exibição; o servidor recalcula o valor)
@@ -56,7 +66,28 @@ function totaisPorPresente() {
 }
 
 // =====================================================================
-// 3) LEITURA EM TEMPO REAL
+// 3) TOPO DA PÁGINA (textos e foto)
+// =====================================================================
+function aplicarSite() {
+  document.title = SITE.titulo;
+  $("hero-rotulo").textContent = SITE.rotulo;
+  $("hero-titulo").textContent = SITE.titulo;
+  $("hero-subtitulo").textContent = SITE.subtitulo;
+  $("rodape").textContent = SITE.rodape;
+
+  const foto = $("foto-topo");
+  // Se a foto não existir, esconde a imagem e o escurecimento: fica o degradê rosa/amarelo
+  foto.onerror = () => {
+    foto.classList.add("hidden");
+    $("foto-overlay").classList.add("hidden");
+  };
+  foto.style.objectPosition = SITE.posicaoFoto;
+  foto.src = SITE.fotoTopo;
+}
+aplicarSite();
+
+// =====================================================================
+// 4) LEITURA EM TEMPO REAL
 // =====================================================================
 onSnapshot(
   collection(db, "presentes"),
@@ -85,7 +116,7 @@ onSnapshot(
 );
 
 // =====================================================================
-// 4) RENDERIZAÇÃO
+// 5) RENDERIZAÇÃO
 // =====================================================================
 function renderCatalogo() {
   const grid = $("lista-presentes");
@@ -100,11 +131,11 @@ function renderCatalogo() {
     const completo = doadas >= p.metaCotas;
 
     return `
-      <article class="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-200">
+      <article class="flex w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-white text-center shadow-md ring-1 ring-stone-200 sm:w-80">
         <img src="${esc(p.imagem)}" alt="${esc(p.nome)}" loading="lazy"
-             class="h-48 w-full object-cover bg-stone-100" />
-        <div class="flex flex-1 flex-col gap-3 p-4">
-          <h3 class="text-lg font-semibold">${esc(p.nome)}</h3>
+             class="h-56 w-full bg-stone-100 object-cover" />
+        <div class="flex flex-1 flex-col gap-3 p-5">
+          <h3 class="text-xl font-semibold">${esc(p.nome)}</h3>
 
           <div>
             <div class="h-3 w-full overflow-hidden rounded-full bg-stone-200">
@@ -126,9 +157,24 @@ function renderCatalogo() {
   }).join("");
 }
 
+// Estilos do pódio (1º, 2º e 3º) e dos demais
+const ESTILO_TOP = [
+  "p-5 sm:p-6 ring-2 ring-amber-400 bg-gradient-to-br from-amber-50 to-white shadow-lg",
+  "p-5 ring-2 ring-slate-300 bg-white shadow-md",
+  "p-5 ring-2 ring-orange-300 bg-white shadow-md",
+];
+const ESTILO_NORMAL = "p-4 ring-1 ring-stone-200 bg-white shadow-sm";
+
 function renderRanking() {
   const lista = $("lista-ranking");
   $("estado-ranking").classList.toggle("hidden", contribuicoes.length > 0);
+
+  // Resumo no topo do mural
+  const totalCotas = contribuicoes.reduce((soma, c) => soma + c.cotas, 0);
+  const n = contribuicoes.length;
+  $("resumo-mural").textContent = n === 0
+    ? "Cada mensagem de vocês vai ficar guardada aqui."
+    : `${totalCotas} ${totalCotas === 1 ? "cota" : "cotas"} de carinho · ${n} ${n === 1 ? "convidado" : "convidados"}`;
 
   const nomePresente = Object.fromEntries(presentes.map((p) => [p.id, p.nome]));
   const medalhas = ["🥇", "🥈", "🥉"];
@@ -137,22 +183,27 @@ function renderRanking() {
   const ordenadas = [...contribuicoes].sort((a, b) =>
     b.cotas - a.cotas || (a.criadoEm?.seconds ?? 0) - (b.criadoEm?.seconds ?? 0));
 
-  lista.innerHTML = ordenadas.map((c, i) => `
-    <li class="flex gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-stone-200">
-      <div class="w-8 text-center text-xl">${medalhas[i] ?? i + 1}</div>
+  lista.innerHTML = ordenadas.map((c, i) => {
+    const top = i < 3;
+    return `
+    <li class="flex gap-4 rounded-2xl ${top ? ESTILO_TOP[i] : ESTILO_NORMAL}">
+      <div class="${top ? "w-10 text-3xl" : "w-8 text-xl"} shrink-0 text-center">${medalhas[i] ?? i + 1}</div>
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-baseline justify-between gap-x-3">
-          <p class="font-semibold">${esc(c.nome)}</p>
-          <p class="text-sm font-medium text-rose-600">${c.cotas} ${c.cotas === 1 ? "cota" : "cotas"}</p>
+          <p class="${top ? "text-lg" : ""} font-semibold">${esc(c.nome)}</p>
+          <p class="text-sm font-semibold text-rose-600">${c.cotas} ${c.cotas === 1 ? "cota" : "cotas"}</p>
         </div>
-        ${c.mensagem ? `<p class="mt-1 break-words text-stone-600">“${esc(c.mensagem)}”</p>` : ""}
-        <p class="mt-1 text-xs text-stone-400">${esc(nomePresente[c.presenteId] ?? "")}</p>
+        ${c.mensagem
+          ? `<p class="mt-2 break-words ${top ? "text-lg italic" : ""} text-stone-600">“${esc(c.mensagem)}”</p>`
+          : ""}
+        <p class="mt-2 text-xs text-stone-400">${esc(nomePresente[c.presenteId] ?? "")}</p>
       </div>
-    </li>`).join("");
+    </li>`;
+  }).join("");
 }
 
 // =====================================================================
-// 5) MODAL E FORMULÁRIO
+// 6) MODAL E FORMULÁRIO
 // =====================================================================
 const campoCotas = $("campo-cotas");
 
