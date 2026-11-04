@@ -346,3 +346,79 @@ $("btn-copiar").addEventListener("click", async () => {
     $("btn-copiar").textContent = "Não foi possível copiar";
   }
 });
+// =====================================================================
+// 7) CONFIRMAÇÃO DE PRESENÇA
+// =====================================================================
+const confirmarPresenca = httpsCallable(functions, "confirmarPresenca");
+
+const campoDoc = $("presenca-doc");
+const tipoDoc = () => document.querySelector('input[name="presenca-tipo"]:checked').value;
+
+/** Validação do CPF (dígitos verificadores) para dar retorno imediato; o servidor valida de novo. */
+function cpfValido(cpf) {
+  const d = cpf.replace(/\D/g, "");
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  const digito = (base) => {
+    let soma = 0;
+    for (let i = 0; i < base.length; i++) soma += Number(base[i]) * (base.length + 1 - i);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+  return digito(d.slice(0, 9)) === Number(d[9]) && digito(d.slice(0, 10)) === Number(d[10]);
+}
+
+/** Máscara 000.000.000-00 enquanto digita */
+const mascaraCpf = (v) => v.replace(/\D/g, "").slice(0, 11)
+  .replace(/(\d{3})(\d)/, "$1.$2")
+  .replace(/(\d{3})(\d)/, "$1.$2")
+  .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+
+// Troca CPF/RG: ajusta o campo
+document.querySelectorAll('input[name="presenca-tipo"]').forEach((r) =>
+  r.addEventListener("change", () => {
+    campoDoc.value = "";
+    const cpf = tipoDoc() === "CPF";
+    campoDoc.placeholder = cpf ? "000.000.000-00" : "Número do RG";
+    campoDoc.inputMode = cpf ? "numeric" : "text";
+  }));
+
+campoDoc.addEventListener("input", () => {
+  if (tipoDoc() === "CPF") campoDoc.value = mascaraCpf(campoDoc.value);
+});
+
+$("form-presenca").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const erro = $("presenca-erro");
+  const btn = $("presenca-btn");
+  const mostrarErro = (msg) => { erro.textContent = msg; erro.classList.remove("hidden"); };
+
+  const nome = $("presenca-nome").value.trim().replace(/\s+/g, " ");
+  const tipo = tipoDoc();
+  const documento = campoDoc.value.trim();
+
+  erro.classList.add("hidden");
+  if (nome.length < 3) return mostrarErro("Informe seu nome completo.");
+  if (tipo === "CPF" && !cpfValido(documento)) return mostrarErro("CPF inválido. Confira os números.");
+  if (tipo === "RG" && !/^[0-9A-Za-z]{5,14}$/.test(documento.replace(/[.\-\s/]/g, ""))) {
+    return mostrarErro("Informe um RG válido.");
+  }
+  if (!$("presenca-aceite").checked) return mostrarErro("Marque a autorização para continuar.");
+
+  btn.disabled = true;
+  btn.textContent = "Enviando…";
+
+  try {
+    await confirmarPresenca({ nome, tipo, documento, consentimento: true });
+    $("form-presenca").classList.add("hidden");
+    $("presenca-ok-texto").textContent = `Obrigado, ${nome}! Estamos te esperando.`;
+    $("presenca-ok").classList.remove("hidden");
+  } catch (err) {
+    console.error(err);
+    mostrarErro(err.code === "functions/invalid-argument"
+      ? err.message
+      : "Não foi possível confirmar. Tente novamente.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Confirmar presença";
+  }
+});
