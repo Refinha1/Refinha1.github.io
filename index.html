@@ -1,5 +1,5 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+ <!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,36 +9,47 @@
 </head>
 <body class="bg-stone-50 text-stone-800 antialiased">
 
-  <!-- ===== Cabeçalho ===== -->
-  <header class="bg-gradient-to-br from-rose-500 to-amber-400 text-white">
-    <div class="mx-auto max-w-5xl px-4 py-12 text-center">
-      <h1 class="text-3xl font-bold sm:text-5xl">Lista de Presentes</h1>
-      <p class="mx-auto mt-3 max-w-xl text-white/90">
-        Escolha um presente, contribua com quantas cotas quiser (R$ 10,00 cada)
-        e deixe uma mensagem de felicitação. Obrigado pelo carinho!
-      </p>
+  <!-- ===== Topo com a foto da casa ===== -->
+  <header class="relative isolate flex min-h-[70vh] items-center justify-center overflow-hidden bg-gradient-to-br from-rose-500 to-amber-400 text-white">
+    <!-- A foto e o texto vêm do bloco SITE no app.js -->
+    <img id="foto-topo" alt="" class="absolute inset-0 -z-10 h-full w-full object-cover" />
+    <!-- Escurece a foto para o texto ficar legível -->
+    <div id="foto-overlay" class="absolute inset-0 -z-10 bg-black/40"></div>
+
+    <div class="mx-auto max-w-3xl px-4 py-16 text-center">
+      <p id="hero-rotulo" class="mb-3 text-sm font-medium uppercase tracking-widest text-white/85"></p>
+      <h1 id="hero-titulo" class="text-4xl font-bold drop-shadow-md sm:text-6xl"></h1>
+      <p id="hero-subtitulo" class="mx-auto mt-4 max-w-xl text-lg text-white/90 drop-shadow"></p>
+      <a href="#presentes"
+         class="mt-8 inline-block rounded-full bg-white px-7 py-3 font-semibold text-rose-600 shadow-lg hover:bg-rose-50">
+        Ver presentes
+      </a>
     </div>
   </header>
 
-  <main class="mx-auto max-w-5xl space-y-14 px-4 py-10">
+  <!-- ===== Catálogo (centralizado) ===== -->
+  <section id="presentes" class="mx-auto max-w-6xl px-4 py-14 text-center">
+    <h2 class="text-3xl font-bold">Escolha seu presente</h2>
+    <p class="mx-auto mt-2 max-w-lg text-stone-500">
+      Cada cota vale R$ 10,00. Contribua com quantas quiser e deixe uma mensagem de carinho.
+    </p>
+    <p id="estado-catalogo" class="mt-8 text-stone-500">Carregando presentes…</p>
+    <!-- flex + justify-center: os cards ficam sempre no meio da tela -->
+    <div id="lista-presentes" class="mt-8 flex flex-wrap justify-center gap-6"></div>
+  </section>
 
-    <!-- ===== Catálogo ===== -->
-    <section>
-      <h2 class="mb-5 text-2xl font-semibold">Presentes</h2>
-      <p id="estado-catalogo" class="text-stone-500">Carregando presentes…</p>
-      <!-- Mobile-first: 1 coluna → 2 (sm) → 3 (lg) -->
-      <div id="lista-presentes" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"></div>
-    </section>
+  <!-- ===== Mural de felicitações (faixa em destaque) ===== -->
+  <section id="mural" class="bg-gradient-to-b from-rose-50 via-amber-50 to-rose-50 py-16">
+    <div class="mx-auto max-w-3xl px-4 text-center">
+      <p class="text-4xl">💌</p>
+      <h2 class="mt-2 text-3xl font-bold sm:text-4xl">Mural de felicitações</h2>
+      <p id="resumo-mural" class="mt-2 text-stone-500"></p>
+      <p id="estado-ranking" class="mt-8 text-stone-500">Ainda não há contribuições. Seja o primeiro!</p>
+      <ol id="lista-ranking" class="mt-8 space-y-4 text-left"></ol>
+    </div>
+  </section>
 
-    <!-- ===== Mural e Ranking ===== -->
-    <section>
-      <h2 class="mb-5 text-2xl font-semibold">Mural de felicitações</h2>
-      <p id="estado-ranking" class="text-stone-500">Ainda não há contribuições. Seja o primeiro!</p>
-      <ol id="lista-ranking" class="space-y-3"></ol>
-    </section>
-  </main>
-
-  <footer class="py-8 text-center text-sm text-stone-400">Feito com carinho 💛</footer>
+  <footer id="rodape" class="py-8 text-center text-sm text-stone-400"></footer>
 
   <!-- ===== Modal de contribuição ===== -->
   <div id="modal" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/50 sm:items-center">
