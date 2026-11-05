@@ -6,6 +6,7 @@
   <title>Lista de Presentes</title>
   <!-- Tailwind via CDN: simples e suficiente para uma página estática -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
    <style>
     /* Texto em preto (os textos brancos do topo continuam brancos, por cima da foto) */
     body { color: #000; }
@@ -94,14 +95,6 @@
   </section>
   <!-- ===== Catálogo (centralizado) ===== -->
   <section id="presentes" class="mx-auto max-w-6xl px-4 py-14 text-center">
-
-  <!-- ===== Confirmação de presença ===== -->
-  <section id="presenca" ...>
-    ...
-  </section>
-
-  <!-- ===== Catálogo (centralizado) ===== -->
-  <section id="presentes" ...>
     <h2 class="text-3xl font-bold">Ajude a montar nossa casa</h2>
     <p class="mx-auto mt-2 max-w-lg text-stone-500">
       Cada cota vale R$ 20,00. Contribua com quantas quiser e deixe uma mensagem de carinho.
@@ -124,11 +117,13 @@
 
   <footer id="rodape" class="py-8 text-center text-sm text-stone-400"></footer>
 
+  <script type="module" src="./app.js"></script>
+
   <!-- ===== Modal de contribuição ===== -->
   <div id="modal" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/50 sm:items-center">
     <div class="max-h-[95vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl">
 
-      <!-- Passo 1: formulário -->
+      <!-- Passo 1: dados do presente -->
       <form id="passo-form" class="space-y-4" novalidate>
         <div class="flex items-start justify-between gap-3">
           <div>
@@ -167,16 +162,39 @@
 
         <p id="erro-form" class="hidden text-sm text-red-600"></p>
 
-        <button id="btn-confirmar" type="submit"
-                class="h-12 w-full rounded-lg bg-rose-500 font-semibold text-white hover:bg-rose-600 disabled:opacity-60">
-          Gerar PIX
-        </button>
+        <!-- Forma de pagamento -->
+        <p class="text-center text-sm font-medium">Como você prefere pagar?</p>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-confirmar" type="submit"
+                  class="h-12 rounded-lg bg-rose-500 text-sm font-semibold text-white hover:bg-rose-600 disabled:opacity-60">
+            Pagar com PIX
+          </button>
+          <button id="btn-cartao" type="button"
+                  class="h-12 rounded-lg bg-stone-800 text-sm font-semibold text-white hover:bg-black disabled:opacity-60">
+            💳 Pagar com cartão
+          </button>
+        </div>
       </form>
 
-      <!-- Passo 2: PIX dinâmico + espera da confirmação -->
+      <!-- Passo 1b: cartão (formulário seguro do Mercado Pago) -->
+      <div id="passo-cartao" class="hidden space-y-3">
+        <div class="flex items-center justify-between">
+          <button id="cartao-voltar" type="button" class="text-sm text-stone-500 underline">← Voltar</button>
+          <button type="button" data-fechar class="text-2xl leading-none text-stone-400 hover:text-stone-600" aria-label="Fechar">&times;</button>
+        </div>
+        <h3 class="text-center text-xl font-semibold">Pagar com cartão 💳</h3>
+        <p id="cartao-resumo" class="text-center font-semibold text-rose-600"></p>
+        <div id="cartao-brick"></div>
+        <p id="cartao-erro" class="hidden text-center text-sm text-red-600"></p>
+        <p class="text-center text-xs text-stone-400">
+          Os dados do cartão vão direto para o Mercado Pago e não passam pelo nosso site.
+        </p>
+      </div>
+
+      <!-- Passo 2: PIX / confirmação -->
       <div id="passo-pix" class="hidden space-y-4 text-center">
 
-        <!-- 2a) Aguardando pagamento -->
+        <!-- 2a) PIX aguardando pagamento -->
         <div id="pix-aguardando" class="space-y-4">
           <h3 class="text-xl font-semibold">Pague com PIX 💛</h3>
           <p class="text-stone-600">Escaneie o QR Code ou use o copia e cola. O valor já vem preenchido.</p>
@@ -197,7 +215,17 @@
           </p>
         </div>
 
-        <!-- 2b) Pagamento confirmado -->
+        <!-- 2b) Pagamento em análise (cartão) -->
+        <div id="pagamento-analise" class="hidden space-y-3 py-4">
+          <div class="text-5xl">⏳</div>
+          <h3 class="text-xl font-semibold">Pagamento em análise</h3>
+          <p class="text-stone-600">
+            O Mercado Pago está analisando o seu cartão. Assim que for aprovado,
+            sua mensagem aparece no mural. Pode fechar esta tela.
+          </p>
+        </div>
+
+        <!-- 2c) Pagamento confirmado -->
         <div id="pix-confirmado" class="hidden space-y-3 py-4">
           <div class="text-6xl">🎉</div>
           <h3 class="text-xl font-semibold">Pagamento confirmado!</h3>
@@ -208,8 +236,5 @@
       </div>
     </div>
   </div>
-
-  <!-- type="module" é necessário para os imports do Firebase -->
-  <script type="module" src="app.js"></script>
 </body>
 </html>
