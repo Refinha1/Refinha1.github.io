@@ -9,7 +9,8 @@ import {
   getFunctions, httpsCallable,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
-// Cole aqui o seu "firebaseConfig" (não são segredos: as Security Rules protegem os dados)
+// O Hosting de homologação também usa o Firestore e as Functions de produção.
+// Testes neste site podem gravar dados reais no projeto casa-nova-refinha.
 const firebaseConfig = {
   apiKey: "AIzaSyD7396GnE9pVule0uYPb6XObIs3yrBTVDg",
   authDomain: "casa-nova-refinha.firebaseapp.com",
@@ -38,6 +39,10 @@ const db = getFirestore(app);
 // A região precisa ser a mesma das Cloud Functions
 const functions = getFunctions(app, "southamerica-east1");
 const criarContribuicao = httpsCallable(functions, "criarContribuicao");
+const pagarComCartao = httpsCallable(functions, "pagarComCartao");
+
+// Public Key do Mercado Pago (Credenciais de produção). Pode ficar no site.
+const MP_PUBLIC_KEY = "APP_USR-a0bef11d-f38e-44a7-b86a-467e06296bd2";
 
 // =====================================================================
 // 2) ESTADO E UTILITÁRIOS
@@ -228,6 +233,10 @@ function abrirModal(presenteId) {
   presenteAtual = presentes.find((p) => p.id === presenteId);
   if (!presenteAtual) return;
 
+  resetarCartao();   // <- nova linha
+  encerrarEspera();
+  // ...resto igual...
+
   encerrarEspera();
   $("modal-item").textContent = presenteAtual.nome;
   $("modal-restantes").textContent = `Faltam ${cotasRestantes(presenteAtual)} cotas`;
@@ -244,6 +253,7 @@ function abrirModal(presenteId) {
 }
 
 function fecharModal() {
+resetarCartao();   // <- nova linha
   encerrarEspera();
   $("modal").classList.add("hidden");
   $("modal").classList.remove("flex");
@@ -263,8 +273,14 @@ $("modal").addEventListener("click", (e) => { if (e.target === $("modal")) fecha
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharModal(); });
 
 // Controles de quantidade
-$("menos").addEventListener("click", () => { campoCotas.value = (parseInt(campoCotas.value, 20) || 1) - 1; atualizarTotal(); });
-$("mais").addEventListener("click",  () => { campoCotas.value = (parseInt(campoCotas.value, 20) || 0) + 1; atualizarTotal(); });
+$("menos").addEventListener("click", () => {
+  campoCotas.value = (parseInt(campoCotas.value, 10) || 1) - 1;
+  atualizarTotal();
+});
+$("mais").addEventListener("click", () => {
+  campoCotas.value = (parseInt(campoCotas.value, 10) || 0) + 1;
+  atualizarTotal();
+});
 campoCotas.addEventListener("input", atualizarTotal);
 
 /** Mostra o QR Code e passa a escutar o documento até ele virar "confirmado". */
@@ -298,7 +314,7 @@ $("passo-form").addEventListener("submit", async (e) => {
 
   const nome = $("campo-nome").value.trim();
   const mensagem = $("campo-mensagem").value.trim();
-  const cotas = parseInt(campoCotas.value, 20);
+  const cotas = parseInt(campoCotas.value, 10);
 
   if (!nome) {
     erro.textContent = "Informe seu nome.";
@@ -312,7 +328,7 @@ $("passo-form").addEventListener("submit", async (e) => {
   }
 
   btn.disabled = true;
-  btn.textContent = "Gerando PIX…";
+  btn.textContent = "Pagar com PIX";
   erro.classList.add("hidden");
 
   try {
@@ -421,4 +437,138 @@ $("form-presenca").addEventListener("submit", async (e) => {
     btn.disabled = false;
     btn.textContent = "Confirmar presença";
   }
+});
+// =====================================================================
+// 8) PAGAMENTO COM CARTÃO (Mercado Pago · Card Payment Brick)
+// =====================================================================
+let mp = null;        // SDK do Mercado Pago (criado na primeira vez)
+let cardBrick = null; // controle do formulário de cartão
+
+/** Desmonta o formulário de cartão e volta o modal ao estado inicial. */
+function resetarCartao() {
+  if (cardBrick) {
+    try { cardBrick.unmount(); } catch { /* já desmontado */ }
+    cardBrick = null;
+  }
+  $("passo-cartao").classList.add("hidden");
+  $("cartao-erro").classList.add("hidden");
+  $("pagamento-analise").classList.add("hidden");
+}
+
+/** Mostra a tela de pagamento confirmado. */
+function mostrarConfirmado() {
+  $("passo-form").classList.add("hidden");
+  $("passo-cartao").classList.add("hidden");
+  $("pix-aguardando").classList.add("hidden");
+  $("pagamento-analise").classList.add("hidden");
+  $("pix-confirmado").classList.remove("hidden");
+  $("passo-pix").classList.remove("hidden");
+}
+
+/** Envia o token do cartão ao backend. Rejeita em caso de erro (o Brick reabilita o formulário). */
+async function enviarCartao(dados, pedido) {
+  const erro = $("cartao-erro");
+  erro.classList.add("hidden");
+
+  try {
+    const { data } = await pagarComCartao({
+      ...pedido,                                   // presenteId, nome, mensagem, cotas
+      token: dados.token,                          // token do cartão (nunca o número)
+      paymentMethodId: dados.payment_method_id,
+      issuerId: dados.issuer_id,
+      email: dados.payer?.email,
+      docTipo: dados.payer?.identification?.type,
+      docNumero: dados.payer?.identification?.number,
+      deviceId: window.MP_DEVICE_SESSION_ID,       // antifraude
+    });
+
+    if (data.status === "approved") {
+      mostrarConfirmado();
+      return;
+    }
+
+    // Em análise: avisa e espera o webhook confirmar
+    $("passo-cartao").classList.add("hidden");
+    $("pix-aguardando").classList.add("hidden");
+    $("pix-confirmado").classList.add("hidden");
+    $("pagamento-analise").classList.remove("hidden");
+    $("passo-pix").classList.remove("hidden");
+
+    encerrarEspera();
+    pararEspera = onSnapshot(doc(db, "contribuicoes", data.contribuicaoId), (snap) => {
+      if (snap.data()?.status === "confirmado") {
+        mostrarConfirmado();
+        encerrarEspera();
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    const amigaveis = ["functions/invalid-argument", "functions/failed-precondition", "functions/not-found"];
+    erro.textContent = amigaveis.includes(err.code)
+      ? err.message
+      : "Não foi possível processar o cartão. Tente novamente ou use o PIX.";
+    erro.classList.remove("hidden");
+    throw err; // avisa o Brick que falhou
+  }
+}
+
+// Clique em "Pagar com cartão": valida o básico e abre o formulário seguro
+$("btn-cartao").addEventListener("click", async () => {
+  const erroForm = $("erro-form");
+  const nome = $("campo-nome").value.trim();
+  const mensagem = $("campo-mensagem").value.trim();
+  const cotas = parseInt(campoCotas.value, 10);
+
+  if (!nome) {
+    erroForm.textContent = "Informe seu nome.";
+    erroForm.classList.remove("hidden");
+    return;
+  }
+  if (!Number.isInteger(cotas) || cotas < 1) {
+    erroForm.textContent = "Escolha ao menos 1 cota.";
+    erroForm.classList.remove("hidden");
+    return;
+  }
+  erroForm.classList.add("hidden");
+
+  const valor = cotas * VALOR_COTA; // só para exibir; o servidor recalcula
+  if (!MP_PUBLIC_KEY || MP_PUBLIC_KEY.includes("COLE-AQUI")) {
+    $("cartao-erro").textContent = "A chave pública do Mercado Pago não foi configurada. Configure a variável MP_PUBLIC_KEY antes de abrir o checkout.";
+    $("cartao-erro").classList.remove("hidden");
+    return;
+  }
+
+  $("cartao-resumo").textContent = `${cotas} ${cotas === 1 ? "cota" : "cotas"} · ${brl.format(valor)}`;
+  $("cartao-erro").classList.add("hidden");
+  $("passo-form").classList.add("hidden");
+  $("passo-cartao").classList.remove("hidden");
+
+  try {
+    if (!mp) mp = new MercadoPago(MP_PUBLIC_KEY, { locale: "pt-BR" });
+    if (cardBrick) { try { cardBrick.unmount(); } catch { /* ok */ } }
+
+    cardBrick = await mp.bricks().create("cardPayment", "cartao-brick", {
+      initialization: { amount: valor },
+      customization: {
+        visual: { style: { theme: "default" } },
+        paymentMethods: { maxInstallments: 1 }, // somente à vista
+      },
+      callbacks: {
+        onReady: () => {},
+        onSubmit: (dados) =>
+          enviarCartao(dados, { presenteId: presenteAtual.id, nome, mensagem, cotas }),
+        onError: (e) => console.error("Brick:", e),
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    $("cartao-erro").textContent = "Não foi possível carregar o formulário do cartão. Use o PIX.";
+    $("cartao-erro").classList.remove("hidden");
+  }
+});
+
+// Voltar da tela de cartão para os dados do presente
+$("cartao-voltar").addEventListener("click", () => {
+  resetarCartao();
+  $("passo-form").classList.remove("hidden");
 });
