@@ -40,6 +40,7 @@ const db = getFirestore(app);
 const functions = getFunctions(app, "southamerica-east1");
 const criarContribuicao = httpsCallable(functions, "criarContribuicao");
 const pagarComCartao = httpsCallable(functions, "pagarComCartao");
+const obterTotalConfirmacoes = httpsCallable(functions, "obterTotalConfirmacoes");
 
 // Public Key do Mercado Pago (Credenciais de produção). Pode ficar no site.
 const MP_PUBLIC_KEY = "APP_USR-a0bef11d-f38e-44a7-b86a-467e06296bd2";
@@ -49,6 +50,8 @@ const MP_PUBLIC_KEY = "APP_USR-a0bef11d-f38e-44a7-b86a-467e06296bd2";
 // =====================================================================
 let presentes = [];       // docs de "presentes"
 let contribuicoes = [];   // somente contribuições CONFIRMADAS (as regras só liberam essas)
+let totalConfirmacoes = null;
+let erroTotalConfirmacoes = false;
 let presenteAtual = null; // presente aberto no modal
 let copiaECola = "";      // código PIX copia e cola da contribuição atual
 let pararEspera = null;   // função que cancela a escuta da confirmação
@@ -120,6 +123,20 @@ onSnapshot(
   (erro) => console.error(erro)
 );
 
+async function atualizarTotalConfirmacoes() {
+  try {
+    const resposta = await obterTotalConfirmacoes();
+    totalConfirmacoes = resposta.data.total;
+    erroTotalConfirmacoes = false;
+  } catch (erro) {
+    console.error(erro);
+    erroTotalConfirmacoes = true;
+  }
+  renderResumoMural();
+}
+
+atualizarTotalConfirmacoes();
+
 // =====================================================================
 // 5) RENDERIZAÇÃO
 // =====================================================================
@@ -174,12 +191,7 @@ function renderRanking() {
   const lista = $("lista-ranking");
   $("estado-ranking").classList.toggle("hidden", contribuicoes.length > 0);
 
-  // Resumo no topo do mural
-  const totalCotas = contribuicoes.reduce((soma, c) => soma + c.cotas, 0);
-  const n = contribuicoes.length;
-  $("resumo-mural").textContent = n === 0
-    ? "Cada mensagem de vocês vai ficar guardada aqui."
-    : `${totalCotas} ${totalCotas === 1 ? "cota" : "cotas"} de carinho · ${n} ${n === 1 ? "convidado" : "convidados"}`;
+  renderResumoMural();
 
   const nomePresente = Object.fromEntries(presentes.map((p) => [p.id, p.nome]));
   const medalhas = ["🥇", "🥈", "🥉"];
@@ -205,6 +217,22 @@ function renderRanking() {
       </div>
     </li>`;
   }).join("");
+}
+
+function renderResumoMural() {
+  if (erroTotalConfirmacoes) {
+    $("resumo-mural").textContent = "Não foi possível carregar as confirmações de presença.";
+    return;
+  }
+
+  if (totalConfirmacoes === null) {
+    $("resumo-mural").textContent = "Carregando confirmações de presença…";
+    return;
+  }
+
+  $("resumo-mural").textContent = totalConfirmacoes === 1
+    ? "1 pessoa confirmou presença"
+    : `${totalConfirmacoes} pessoas confirmaram presença`;
 }
 
 // =====================================================================
@@ -428,6 +456,7 @@ $("form-presenca").addEventListener("submit", async (e) => {
     $("form-presenca").classList.add("hidden");
     $("presenca-ok-texto").textContent = `Obrigado, ${nome}! Estamos te esperando.`;
     $("presenca-ok").classList.remove("hidden");
+    await atualizarTotalConfirmacoes();
   } catch (err) {
     console.error(err);
     mostrarErro(err.code === "functions/invalid-argument"
