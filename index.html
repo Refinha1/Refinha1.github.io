@@ -1,240 +1,272 @@
- <!DOCTYPE html>
-<html lang="pt-BR" class="scroll-smooth">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lista de Presentes</title>
-  <!-- Tailwind via CDN: simples e suficiente para uma página estática -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="theme-color" content="#faf7f2" />
+  <meta name="description" content="Obrigado por celebrar nosso chá de panela. Veja as fotos e, se ainda quiser, escolha um presente para nossa casa nova." />
+  <title>Obrigado por celebrar com a gente</title>
   <script src="https://sdk.mercadopago.com/js/v2"></script>
-   <style>
-    /* Texto em preto (os textos brancos do topo continuam brancos, por cima da foto) */
-    body { color: #000; }
-    .text-stone-400,
-    .text-stone-500,
-    .text-stone-600,
-    .text-stone-800 { color: #000 !important; }
-        /* Formulário de presença: texto preto sobre o cartão branco */
-    #form-presenca, #presenca-ok { color: #000; }
-    #form-presenca input { color: #000; }
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #38332f;
+      --muted: #77706a;
+      --rose: #a64e58;
+      --rose-dark: #843c46;
+      --paper: #fffdfa;
+      --sand: #faf7f2;
+      --line: #e9e1d8;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: Arial, sans-serif; }
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .hero {
+      position: relative;
+      display: grid;
+      min-height: 390px;
+      place-items: center;
+      overflow: hidden;
+      padding: 64px 24px;
+      background: #4a3d35 url("fotos/casa.jpg") center 43% / cover no-repeat;
+      color: white;
+      text-align: center;
+    }
+
+    .hero::before { position: absolute; inset: 0; background: rgb(31 26 23 / 55%); content: ""; }
+    .hero-content { position: relative; max-width: 700px; }
+    .eyebrow { margin: 0 0 14px; font-size: 12px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
+    h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(38px, 7vw, 64px); font-weight: 400; line-height: 1.05; }
+    .hero p:last-child { margin: 18px 0 0; color: rgb(255 255 255 / 90%); font-size: 17px; line-height: 1.65; }
+
+    main { width: min(1120px, 100%); margin: 0 auto; padding: 64px 24px 80px; }
+    .thanks { padding: 96px 24px; background: var(--paper); text-align: center; }
+    .thanks-inner { max-width: 720px; margin: 0 auto; }
+    .thanks .eyebrow, .gallery .eyebrow { color: var(--rose); }
+    .thanks h2, .gallery h2 { font-size: clamp(30px, 5vw, 42px); }
+    .thanks-copy { margin: 16px 0 0; color: var(--muted); font-family: Georgia, "Times New Roman", serif; font-size: 17px; line-height: 1.8; }
+    .gallery { margin-bottom: 100px; text-align: center; }
+    .gallery-intro { margin: 10px 0 28px; color: var(--muted); line-height: 1.6; }
+    .photo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 16px; }
+    .photo-card { overflow: hidden; }
+    .photo-card button { display: block; width: 100%; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+    .photo-card img { display: block; width: 100%; height: auto; object-fit: contain; }
+    .empty-gallery { max-width: 650px; margin: 0 auto; padding: 30px 24px; border: 1px dashed #d9c9bd; border-radius: 10px; color: var(--muted); line-height: 1.7; }
+    .empty-gallery strong { display: block; margin-bottom: 6px; color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: 21px; font-weight: 400; }
+    .contribution-note { max-width: 850px; margin: 0 auto; padding-top: 24px; border-top: 1px solid var(--line); }
+    .contribution-note summary { display: grid; gap: 7px; justify-items: center; padding: 12px; color: var(--muted); cursor: pointer; list-style: none; text-align: center; }
+    .contribution-note summary::-webkit-details-marker { display: none; }
+    .contribution-note summary::after { color: var(--rose); content: "＋"; font-size: 20px; }
+    .contribution-note[open] summary::after { content: "−"; }
+    .contribution-note summary span { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+    .contribution-note summary strong { color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: 21px; font-weight: 400; }
+    .contribution-note summary small { font-size: 13px; }
+    .contribution-content { padding: 22px 0 0; }
+    .lightbox { width: min(94vw, 1100px); max-width: none; max-height: 92vh; padding: 0; overflow: visible; border: 0; background: transparent; }
+    .lightbox::backdrop { background: rgb(20 17 16 / 88%); }
+    .lightbox img { display: block; max-width: 100%; max-height: 84vh; margin: auto; object-fit: contain; }
+    .lightbox-close { position: absolute; top: -42px; right: 0; width: 36px; height: 36px; border: 1px solid rgb(255 255 255 / 65%); border-radius: 50%; background: transparent; color: white; font-size: 22px; }
+    .section-heading { margin-bottom: 30px; text-align: center; }
+    h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(30px, 5vw, 42px); font-weight: 400; }
+    .section-heading p { margin: 10px 0 0; color: var(--muted); line-height: 1.6; }
+    #estado-catalogo { padding: 26px; color: var(--muted); text-align: center; }
+    .catalog { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 22px; }
+    .gift-card { display: flex; min-height: 100%; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); box-shadow: 0 8px 26px rgb(65 48 38 / 6%); }
+    .gift-card img { width: 100%; height: 205px; background: #f0ece7; object-fit: cover; }
+    .gift-copy { display: flex; flex: 1; flex-direction: column; gap: 14px; padding: 20px; }
+    .gift-copy h3 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 23px; font-weight: 400; }
+    .gift-copy p { margin: 0; color: var(--muted); font-size: 13px; }
+    .progress { height: 8px; overflow: hidden; border-radius: 20px; background: #eee8e2; }
+    .progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--rose), #cb8b74); }
+    .primary, .secondary {
+      min-height: 46px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+    .primary { background: var(--rose); color: white; }
+    .primary:hover { background: var(--rose-dark); }
+    .primary:disabled { background: #bbb3ac; cursor: not-allowed; }
+    .gift-copy .primary { margin-top: auto; }
+    footer { padding: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; text-align: center; }
+
+    .modal {
+      position: fixed;
+      z-index: 5;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+      padding: 18px;
+      background: rgb(24 20 18 / 58%);
+    }
+    .modal.open { display: flex; }
+    .modal-panel { position: relative; width: min(100%, 470px); max-height: 95vh; overflow-y: auto; border-radius: 16px; background: var(--paper); padding: 26px; box-shadow: 0 22px 70px rgb(0 0 0 / 22%); }
+    .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    .modal-header h2 { font-size: 26px; }
+    .close { flex: 0 0 auto; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: white; color: var(--muted); font-size: 22px; }
+    .field { margin-bottom: 15px; }
+    .field label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 700; }
+    .field input, .field textarea { width: 100%; border: 1px solid #d9d1c9; border-radius: 8px; padding: 11px 12px; color: var(--ink); outline-color: var(--rose); }
+    .field textarea { min-height: 84px; resize: vertical; }
+    .amount { display: flex; align-items: center; gap: 10px; }
+    .amount button { width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 8px; background: white; font-size: 22px; }
+    .amount input { flex: 1; width: 60px; text-align: center; }
+    .total { margin: 12px 0 20px; color: var(--rose); font-size: 19px; font-weight: 700; text-align: right; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .secondary { border: 1px solid var(--line); background: white; color: var(--ink); }
+    .error { margin: 12px 0 0; color: #b42318; font-size: 13px; line-height: 1.5; }
+    .hidden { display: none !important; }
+    .center { text-align: center; }
+    .center h3 { font-family: Georgia, "Times New Roman", serif; font-size: 25px; font-weight: 400; }
+    .center p { color: var(--muted); line-height: 1.6; }
+    .qr { display: block; width: 220px; height: 220px; margin: 16px auto; border: 1px solid var(--line); object-fit: contain; }
+    .wide { width: 100%; }
+    #cartao-brick { min-height: 250px; }
+    #cartao-erro { text-align: center; }
+    @media (max-width: 520px) {
+      main { padding: 48px 16px 60px; }
+      .hero { min-height: 350px; }
+      .thanks { padding: 70px 20px; }
+      .gallery { margin-bottom: 70px; }
+      .modal-panel { padding: 21px; }
+      .actions { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
-<body class="bg-stone-50 text-stone-800 antialiased">
-   <!-- ===== Topo com a foto da casa + confirmação de presença ===== -->
-    <!-- ===== Topo com a foto da casa ===== -->
-  <header class="relative isolate flex min-h-[70vh] items-center justify-center overflow-hidden bg-gradient-to-br from-rose-500 to-amber-400 text-white">
-    <!-- A foto e o texto vêm do bloco SITE no app.js -->
-    <img id="foto-topo" alt="" class="absolute inset-0 -z-10 h-full w-full object-cover" />
-    <!-- Escurece a foto para o texto ficar legível -->
-    <div id="foto-overlay" class="absolute inset-0 -z-10 bg-black/40"></div>
-
-    <div class="mx-auto max-w-3xl px-4 py-16 text-center">
-      <p id="hero-rotulo" class="mb-3 text-sm font-medium uppercase tracking-widest text-white/85"></p>
-      <h1 id="hero-titulo" class="text-4xl font-bold drop-shadow-md sm:text-6xl"></h1>
-      <p id="hero-subtitulo" class="mx-auto mt-4 max-w-xl text-lg text-white/90 drop-shadow"></p>
-
-      <div class="mt-8 flex flex-wrap justify-center gap-3">
-        <a href="#presenca"
-           class="rounded-full bg-white px-7 py-3 font-semibold text-rose-600 shadow-lg hover:bg-rose-50">
-          Confirmar presença
-        </a>
-        <a href="#presentes"
-           class="rounded-full border border-white/70 px-7 py-3 font-semibold text-white hover:bg-white/10">
-          Ver presentes
-        </a>
-      </div>
+<body>
+  <header class="hero">
+    <div class="hero-content">
+      <p class="eyebrow">Um dia para guardar no coração</p>
+      <h1>Obrigado por celebrar com a gente</h1>
+      <p>Nosso chá foi ainda mais especial com seu carinho. Foi uma alegria enorme celebrar esse novo capítulo ao lado de pessoas tão queridas.</p>
     </div>
   </header>
-   <!-- ===== Confirmação de presença (abaixo da foto) ===== -->
-  <section id="presenca" class="mx-auto max-w-md px-4 py-14 text-center text-black">
-    <p class="text-4xl">🎟️</p>
-    <h2 class="mt-2 text-3xl font-bold">Confirme sua presença</h2>
-    <p class="mt-2">Preencha seus dados para entrar na lista de convidados.</p>
 
-    <form id="form-presenca" class="mt-6 space-y-4 rounded-2xl bg-white p-5 text-left text-black shadow-md ring-1 ring-stone-200" novalidate>
-      <div>
-        <label class="mb-1 block text-sm font-medium" for="presenca-nome">Nome completo</label>
-        <input id="presenca-nome" type="text" maxlength="80" autocomplete="name"
-               class="h-11 w-full rounded-lg border px-3 text-black" />
+  <section class="thanks" aria-labelledby="thanks-title">
+    <div class="thanks-inner">
+      <p class="eyebrow">Com carinho</p>
+      <h2 id="thanks-title">Obrigado por fazer parte da nossa história</h2>
+      <p class="thanks-copy">
+        Cada gesto, abraço e mensagem tornou nosso chá de panela inesquecível.
+        Levamos com a gente a alegria de ter vocês por perto e todo o amor que recebemos.
+      </p>
+    </div>
+  </section>
+
+  <main>
+    <section class="gallery" id="galeria" aria-labelledby="gallery-title">
+      <p class="eyebrow">Um pouquinho daquele dia</p>
+      <h2 id="gallery-title">Galeria de lembranças</h2>
+      <p class="gallery-intro">Momentos felizes que vamos guardar para sempre.</p>
+      <div id="photo-grid" class="photo-grid" aria-live="polite"></div>
+      <div id="empty-gallery" class="empty-gallery" hidden>
+        <strong>As fotos do nosso chá vêm aí</strong>
+        Estamos reunindo os registros do dia para compartilhar aqui.
       </div>
+    </section>
 
-      <div>
-        <span class="mb-1 block text-sm font-medium">Documento</span>
-        <div class="mb-2 grid grid-cols-2 gap-2">
-          <label class="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50">
-            <input type="radio" name="presenca-tipo" value="CPF" checked class="accent-rose-500" /> CPF
-          </label>
-          <label class="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50">
-            <input type="radio" name="presenca-tipo" value="RG" class="accent-rose-500" /> RG
-          </label>
+    <details class="contribution-note" open>
+      <summary>
+        <span>Uma observação, para quem quiser</span>
+        <strong>Ainda dá tempo de enviar um presente</strong>
+        <small>As contribuições continuam disponíveis por PIX ou cartão.</small>
+      </summary>
+      <div id="contribuicao" class="contribution-content" aria-labelledby="contribuicao-title">
+        <div class="section-heading">
+          <h2 id="contribuicao-title">Presentes para nossa casa</h2>
+          <p>Escolha um presente e contribua com quantas cotas quiser. Cada cota vale R$ 20,00.</p>
         </div>
-        <input id="presenca-doc" type="text" inputmode="numeric" maxlength="14" placeholder="000.000.000-00"
-               class="h-11 w-full rounded-lg border px-3 text-black" />
+        <p id="estado-catalogo">Carregando presentes…</p>
+        <div id="lista-presentes" class="catalog"></div>
       </div>
+    </details>
+  </main>
 
-      <label class="flex items-start gap-2 text-xs">
-        <input id="presenca-aceite" type="checkbox" class="mt-0.5 h-4 w-4 accent-rose-500" />
-        <span>Autorizo o uso do meu nome e documento para a liberação na portaria.
-            Rafael protege seus dados</span>
-      </label>
+  <footer>Obrigado por fazer parte desse momento especial.</footer>
 
-      <p id="presenca-erro" class="hidden text-sm text-red-600"></p>
+  <dialog id="lightbox" class="lightbox" aria-label="Visualização da foto">
+    <button class="lightbox-close" type="button" aria-label="Fechar foto">&times;</button>
+    <img id="lightbox-image" alt="" />
+  </dialog>
 
-      <button id="presenca-btn" type="submit"
-              class="h-12 w-full rounded-lg bg-rose-500 font-semibold text-white hover:bg-rose-600 disabled:opacity-60">
-        Confirmar presença
-      </button>
-    </form>
-
-    <!-- Mostrado depois de confirmar -->
-    <div id="presenca-ok" class="mt-6 hidden rounded-2xl bg-white p-8 text-black shadow-md ring-1 ring-stone-200">
-      <div class="text-5xl">🎉</div>
-      <h3 class="mt-3 text-xl font-semibold">Presença confirmada!</h3>
-      <p id="presenca-ok-texto" class="mt-1"></p>
-    </div>
-  </section>
-  <!-- ===== Catálogo (centralizado) ===== -->
-  <section id="presentes" class="mx-auto max-w-6xl px-4 py-14 text-center">
-    <h2 class="text-3xl font-bold">Ajude a montar nossa casa</h2>
-    <p class="mx-auto mt-2 max-w-lg text-stone-500">
-      Cada cota vale R$ 20,00. Contribua com quantas quiser e deixe uma mensagem de carinho.
-    </p>
-    <p id="estado-catalogo" class="mt-8 text-stone-500">Carregando presentes…</p>
-    <!-- flex + justify-center: os cards ficam sempre no meio da tela -->
-    <div id="lista-presentes" class="mt-8 flex flex-wrap justify-center gap-6"></div>
-  </section>
-
-  <!-- ===== Mural de felicitações (faixa em destaque) ===== -->
-  <section id="mural" class="bg-gradient-to-b from-rose-50 via-amber-50 to-rose-50 py-16">
-    <div class="mx-auto max-w-3xl px-4 text-center">
-      <p class="text-4xl">💌</p>
-      <h2 class="mt-2 text-3xl font-bold sm:text-4xl">Mural de felicitações</h2>
-      <p id="resumo-mural" class="mt-2 text-stone-500"></p>
-      <p id="estado-ranking" class="mt-8 text-stone-500">Ainda não há contribuições. Seja o primeiro!</p>
-      <ol id="lista-ranking" class="mt-8 space-y-4 text-left"></ol>
-    </div>
-  </section>
-
-  <footer id="rodape" class="py-8 text-center text-sm text-stone-400"></footer>
-
-  <script type="module" src="./app.js"></script>
-
-  <!-- ===== Modal de contribuição ===== -->
-  <div id="modal" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/50 sm:items-center">
-    <div class="max-h-[95vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl">
-
-      <!-- Passo 1: dados do presente -->
-      <form id="passo-form" class="space-y-4" novalidate>
-        <div class="flex items-start justify-between gap-3">
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <div class="modal-panel">
+      <div id="passo-form">
+        <div class="modal-header">
           <div>
-            <p class="text-sm text-stone-500">Você vai presentear com</p>
-            <h3 id="modal-item" class="text-xl font-semibold"></h3>
-            <p id="modal-restantes" class="text-sm text-stone-500"></p>
+            <p style="margin:0 0 5px;color:var(--muted);font-size:13px">Sua contribuição</p>
+            <h2 id="modal-titulo"></h2>
+            <p id="modal-restantes" style="margin:6px 0 0;color:var(--muted);font-size:13px"></p>
           </div>
-          <button type="button" data-fechar class="text-2xl leading-none text-stone-400 hover:text-stone-600" aria-label="Fechar">&times;</button>
+          <button type="button" class="close" data-fechar aria-label="Fechar">&times;</button>
         </div>
 
-        <!-- Seletor de cotas -->
-        <div>
-          <label class="mb-1 block text-sm font-medium" for="campo-cotas">Quantidade de cotas</label>
-          <div class="flex items-center gap-2">
-            <button type="button" id="menos" class="h-11 w-11 rounded-lg border text-xl hover:bg-stone-100">−</button>
-            <input id="campo-cotas" type="number" min="1" value="1" inputmode="numeric"
-                   class="h-11 w-full rounded-lg border text-center text-lg" />
-            <button type="button" id="mais" class="h-11 w-11 rounded-lg border text-xl hover:bg-stone-100">+</button>
+        <div class="field">
+          <label for="campo-cotas">Quantidade de cotas</label>
+          <div class="amount">
+            <button type="button" id="menos" aria-label="Diminuir cotas">−</button>
+            <input id="campo-cotas" type="number" min="1" value="1" inputmode="numeric" />
+            <button type="button" id="mais" aria-label="Aumentar cotas">+</button>
           </div>
-          <p class="mt-2 text-right text-lg font-semibold text-rose-600">
-            Total: <span id="total-valor">R$ 20,00</span>
-          </p>
+          <p class="total">Total: <span id="total-valor">R$ 20,00</span></p>
         </div>
 
-        <div>
-          <label class="mb-1 block text-sm font-medium" for="campo-nome">Seu nome</label>
-          <input id="campo-nome" type="text" maxlength="60" required autocomplete="name"
-                 class="h-11 w-full rounded-lg border px-3" />
+        <div class="field">
+          <label for="campo-nome">Seu nome</label>
+          <input id="campo-nome" type="text" maxlength="60" autocomplete="name" required />
         </div>
-
-        <div>
-          <label class="mb-1 block text-sm font-medium" for="campo-mensagem">Mensagem de felicitação</label>
-          <textarea id="campo-mensagem" rows="3" maxlength="300"
-                    class="w-full rounded-lg border px-3 py-2"></textarea>
+        <div class="field">
+          <label for="campo-mensagem">Mensagem (opcional)</label>
+          <textarea id="campo-mensagem" maxlength="300"></textarea>
         </div>
-
-        <p id="erro-form" class="hidden text-sm text-red-600"></p>
-
-        <!-- Forma de pagamento -->
-        <p class="text-center text-sm font-medium">Como você prefere pagar?</p>
-        <div class="grid grid-cols-2 gap-2">
-          <button id="btn-confirmar" type="submit"
-                  class="h-12 rounded-lg bg-rose-500 text-sm font-semibold text-white hover:bg-rose-600 disabled:opacity-60">
-            Pagar com PIX
-          </button>
-          <button id="btn-cartao" type="button"
-                  class="h-12 rounded-lg bg-stone-800 text-sm font-semibold text-white hover:bg-black disabled:opacity-60">
-            💳 Pagar com cartão
-          </button>
+        <p id="erro-form" class="error hidden" role="alert"></p>
+        <p style="margin:0 0 10px;text-align:center;font-size:13px;font-weight:700">Escolha a forma de pagamento</p>
+        <div class="actions">
+          <button id="btn-confirmar" type="button" class="primary">Pagar com PIX</button>
+          <button id="btn-cartao" type="button" class="secondary">Pagar com cartão</button>
         </div>
-      </form>
-
-      <!-- Passo 1b: cartão (formulário seguro do Mercado Pago) -->
-      <div id="passo-cartao" class="hidden space-y-3">
-        <div class="flex items-center justify-between">
-          <button id="cartao-voltar" type="button" class="text-sm text-stone-500 underline">← Voltar</button>
-          <button type="button" data-fechar class="text-2xl leading-none text-stone-400 hover:text-stone-600" aria-label="Fechar">&times;</button>
-        </div>
-        <h3 class="text-center text-xl font-semibold">Pagar com cartão 💳</h3>
-        <p id="cartao-resumo" class="text-center font-semibold text-rose-600"></p>
-        <div id="cartao-brick"></div>
-        <p id="cartao-erro" class="hidden text-center text-sm text-red-600"></p>
-        <p class="text-center text-xs text-stone-400">
-          Os dados do cartão vão direto para o Mercado Pago e não passam pelo nosso site.
-        </p>
       </div>
 
-      <!-- Passo 2: PIX / confirmação -->
-      <div id="passo-pix" class="hidden space-y-4 text-center">
-
-        <!-- 2a) PIX aguardando pagamento -->
-        <div id="pix-aguardando" class="space-y-4">
-          <h3 class="text-xl font-semibold">Pague com PIX 💛</h3>
-          <p class="text-stone-600">Escaneie o QR Code ou use o copia e cola. O valor já vem preenchido.</p>
-          <p id="pix-valor" class="text-3xl font-bold text-rose-600"></p>
-          <img id="pix-qr" alt="QR Code PIX" class="mx-auto h-56 w-56 rounded-lg border object-contain" />
-
-          <button id="btn-copiar" type="button"
-                  class="w-full rounded-lg border px-3 py-2 text-sm hover:bg-stone-100">
-            Copiar código PIX (copia e cola)
-          </button>
-
-          <p class="flex items-center justify-center gap-2 text-sm text-stone-500">
-            <span class="h-3 w-3 animate-pulse rounded-full bg-amber-400"></span>
-            Aguardando confirmação do pagamento…
-          </p>
-          <p class="text-xs text-stone-400">
-            O código expira em 60 minutos. Sua mensagem entra no mural assim que o pagamento for confirmado.
-          </p>
+      <div id="passo-cartao" class="hidden">
+        <div class="modal-header">
+          <button id="cartao-voltar" type="button" class="secondary" style="min-height:36px;padding:0 12px">← Voltar</button>
+          <button type="button" class="close" data-fechar aria-label="Fechar">&times;</button>
         </div>
+        <h2 class="center" style="font-size:25px">Pagamento com cartão</h2>
+        <p id="cartao-resumo" class="center" style="color:var(--rose);font-weight:700"></p>
+        <div id="cartao-brick"></div>
+        <p id="cartao-erro" class="error hidden" role="alert"></p>
+        <p style="color:var(--muted);font-size:12px;line-height:1.5;text-align:center">Os dados do cartão são enviados diretamente ao Mercado Pago.</p>
+      </div>
 
-        <!-- 2b) Pagamento em análise (cartão) -->
-        <div id="pagamento-analise" class="hidden space-y-3 py-4">
-          <div class="text-5xl">⏳</div>
-          <h3 class="text-xl font-semibold">Pagamento em análise</h3>
-          <p class="text-stone-600">
-            O Mercado Pago está analisando o seu cartão. Assim que for aprovado,
-            sua mensagem aparece no mural. Pode fechar esta tela.
-          </p>
+      <div id="passo-pix" class="hidden center">
+        <div id="pix-aguardando">
+          <h3>Pague com PIX</h3>
+          <p>Escaneie o QR Code ou copie o código PIX para pagar.</p>
+          <p id="pix-valor" style="font-size:25px;font-weight:700;color:var(--rose)"></p>
+          <img id="pix-qr" class="qr" alt="QR Code PIX" />
+          <button id="btn-copiar" type="button" class="secondary wide">Copiar código PIX</button>
+          <p>Aguardando confirmação do pagamento…</p>
         </div>
-
-        <!-- 2c) Pagamento confirmado -->
-        <div id="pix-confirmado" class="hidden space-y-3 py-4">
-          <div class="text-6xl">🎉</div>
-          <h3 class="text-xl font-semibold">Pagamento confirmado!</h3>
-          <p class="text-stone-600">Muito obrigado! Sua mensagem já está no mural.</p>
+        <div id="pagamento-analise" class="hidden">
+          <h3>Pagamento em análise</h3>
+          <p>O Mercado Pago está analisando o pagamento. A confirmação será atualizada aqui.</p>
         </div>
-
-        <button type="button" data-fechar class="h-11 w-full rounded-lg bg-stone-800 font-medium text-white">Fechar</button>
+        <div id="pix-confirmado" class="hidden">
+          <h3>Pagamento confirmado!</h3>
+          <p>Muito obrigado pela contribuição.</p>
+        </div>
+        <button type="button" data-fechar class="primary wide" style="margin-top:20px">Fechar</button>
       </div>
     </div>
   </div>
+
+  <script type="module" src="./pagamentos.js"></script>
 </body>
 </html>
